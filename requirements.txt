@@ -1,0 +1,14 @@
+Flask
+Flask-MySQLdb
+Flask-Bcrypt
+Flask-WTF
+Flask-Login
+email-validator
+Flask-Mail
+Flask-Session
+Flask-Admin
+Flask-Migrate
+Flask-Script
+python-dotenv
+pandas
+numpy

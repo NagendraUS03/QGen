@@ -1,0 +1,61 @@
+<!-- templates/partials/navbar.html -->
+<nav class="bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center">
+  
+  <!-- Left: Logo & Tagline (clickable to dashboard) -->
+  <a href="{{ url_for('main.dashboard') }}" class="logo-container flex items-center gap-2 cursor-pointer">
+    <!-- Paper icon -->
+    <div class="paper-icon transition-transform duration-300">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    </div>
+
+    <!-- Logo text -->
+    <div class="flex items-end">
+      <span class="logo-q text-3xl font-bold text-indigo-600 dark:text-indigo-400 transition-transform duration-300 transform hover:scale-110 hover:text-indigo-700 dark:hover:text-indigo-500">Q</span>
+      <span class="logo-gen text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-400 dark:to-purple-400 transition-transform duration-300 transform hover:scale-110 hover:text-indigo-700 dark:hover:text-indigo-500">Gen</span>
+    </div>
+
+    <!-- Tagline -->
+    <span class="hidden md:inline-block text-xs text-gray-500 dark:text-gray-400 italic ml-2">Question Paper Generator</span>
+  </a>
+
+  <!-- Right: Welcome, Dark Mode Toggle, Logout -->
+  <div class="flex items-center gap-4">
+    <span class="font-medium text-blue-600 dark:text-blue-400">👋🏼Hello, {{ current_user.username }}</span>
+
+    <!-- 🌙/🔆 Toggle -->
+    <button id="darkToggle" data-theme="light" class="transition-transform duration-300 text-gray-600 dark:text-yellow-300 text-xl focus:outline-none" title="Toggle Dark Mode">
+      <span id="darkIcon" class="transition-transform duration-150">🌙</span>
+    </button>
+
+    <!-- 🔴 Logout -->
+    <a href="{{ url_for('main.logout') }}" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm">Logout</a>
+  </div>
+</nav>
+
+<!-- Dark Mode Script -->
+<script>
+const toggle = document.getElementById("darkToggle");
+const icon = document.getElementById("darkIcon");
+const htmlElement = document.documentElement;
+
+const savedTheme = localStorage.getItem("theme");
+if (savedTheme === "dark") {
+  htmlElement.classList.add("dark");
+  icon.textContent = "🔆";
+  toggle.setAttribute("data-theme", "dark");
+} else {
+  htmlElement.classList.remove("dark");
+  icon.textContent = "🌙";
+  toggle.setAttribute("data-theme", "light");
+}
+
+toggle.addEventListener("click", () => {
+  const isDark = htmlElement.classList.toggle("dark");
+  const newTheme = isDark ? "dark" : "light";
+  icon.textContent = isDark ? "🔆" : "🌙";
+  localStorage.setItem("theme", newTheme);
+  toggle.setAttribute("data-theme", newTheme);
+});
+</script>

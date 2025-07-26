@@ -1,0 +1,398 @@
+<!-- templates/account_settings.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Settings - QGen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {},
+            }
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.3/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    {% include 'partials/HeaderNavBar.html' %}
+
+    <!-- Main Content -->
+    <main class="max-w-3xl mx-auto px-4 py-8" x-data="{
+        usernameStep: 1,
+        passwordStep: 1,
+        usernameOtpSent: false,
+        passwordOtpSent: false,
+        loading: false,
+        message: '',
+        messageType: '',
+        cooldown: 0,
+        
+        async requestUsernameOtp() {
+            this.loading = true;
+            try {
+                const response = await fetch('{{ url_for('main.request_username_change_otp') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.usernameStep = 2;
+                    this.usernameOtpSent = true;
+                    this.message = data.message;
+                    this.messageType = 'success';
+                    this.startCooldown();
+                } else {
+                    this.message = data.message;
+                    this.messageType = 'error';
+                }
+            } catch (error) {
+                this.message = 'An error occurred. Please try again.';
+                this.messageType = 'error';
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        async changeUsername() {
+            this.loading = true;
+            const otp = document.getElementById('username-otp').value;
+            const newUsername = document.getElementById('new-username').value;
+            
+            if (!otp || !newUsername) {
+                this.message = 'Please fill all fields';
+                this.messageType = 'error';
+                this.loading = false;
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('otp', otp);
+                formData.append('new_username', newUsername);
+                
+                const response = await fetch('{{ url_for('main.change_username') }}', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.usernameStep = 3;
+                    this.message = data.message;
+                    this.messageType = 'success';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    this.message = data.message;
+                    this.messageType = 'error';
+                }
+            } catch (error) {
+                this.message = 'An error occurred. Please try again.';
+                this.messageType = 'error';
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        async requestPasswordOtp() {
+            this.loading = true;
+            try {
+                const response = await fetch('{{ url_for('main.request_password_reset_otp') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.passwordStep = 2;
+                    this.passwordOtpSent = true;
+                    this.message = data.message;
+                    this.messageType = 'success';
+                    this.startCooldown();
+                } else {
+                    this.message = data.message;
+                    this.messageType = 'error';
+                    if (data.message.includes('wait')) {
+                        const remainingTime = parseInt(data.message.match(/\d+/)[0]);
+                        this.cooldown = remainingTime;
+                        this.startCountdown();
+                    }
+                }
+            } catch (error) {
+                this.message = 'An error occurred. Please try again.';
+                this.messageType = 'error';
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        async resetPassword() {
+            this.loading = true;
+            const otp = document.getElementById('password-otp').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            if (!otp || !newPassword || !confirmPassword) {
+                this.message = 'Please fill all fields';
+                this.messageType = 'error';
+                this.loading = false;
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                this.message = 'Passwords do not match';
+                this.messageType = 'error';
+                this.loading = false;
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('otp', otp);
+                formData.append('new_password', newPassword);
+                formData.append('confirm_password', confirmPassword);
+                
+                const response = await fetch('{{ url_for('main.reset_password') }}', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.passwordStep = 3;
+                    this.message = data.message;
+                    this.messageType = 'success';
+                } else {
+                    this.message = data.message;
+                    this.messageType = 'error';
+                }
+            } catch (error) {
+                this.message = 'An error occurred. Please try again.';
+                this.messageType = 'error';
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        resetUsernameForm() {
+            this.usernameStep = 1;
+            this.usernameOtpSent = false;
+            this.message = '';
+        },
+        
+        resetPasswordForm() {
+            this.passwordStep = 1;
+            this.passwordOtpSent = false;
+            this.message = '';
+        },
+        
+        startCooldown() {
+            this.cooldown = 60; // 60 seconds cooldown
+            this.startCountdown();
+        },
+        
+        startCountdown() {
+            if (this.cooldown > 0) {
+                setTimeout(() => {
+                    this.cooldown--;
+                    this.startCountdown();
+                }, 1000);
+            }
+        }
+    }">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+            <h1 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">Account Settings</h1>
+            
+            <!-- Alert Messages -->
+            <div x-show="message" x-transition
+                 :class="messageType === 'success' ? 'bg-green-100 dark:bg-green-900 border-green-500 text-green-700 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 border-red-500 text-red-700 dark:text-red-200'"
+                 class="border-l-4 p-4 mb-6">
+                <p x-text="message"></p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Change Username Section -->
+                <div class="bg-blue-50 dark:bg-blue-900/30 p-6 rounded-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Change Username</h2>
+                    
+                    <!-- Current Info -->
+                    <div class="mb-4">
+                        <p class="text-gray-600 dark:text-gray-300">Current Username: <span class="font-medium">{{ current_user.username }}</span></p>
+                        <p class="text-gray-600 dark:text-gray-300">Email: <span class="font-medium">{{ current_user.email }}</span></p>
+                    </div>
+                    
+                    <!-- Step 1: Request OTP -->
+                    <div x-show="usernameStep === 1" class="space-y-4">
+                        <p class="text-sm text-gray-600 dark:text-gray-300">To change your username, we'll send a verification code to your email.</p>
+                        <button @click="requestUsernameOtp" 
+                                :disabled="loading || cooldown > 0"
+                                class="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white py-2 px-4 rounded-md transition">
+                            <span x-show="!loading && cooldown === 0">Send Verification Code</span>
+                            <span x-show="loading">Processing...</span>
+                            <span x-show="!loading && cooldown > 0">Resend in <span x-text="cooldown"></span>s</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Step 2: Enter OTP & New Username -->
+                    <div x-show="usernameStep === 2" class="space-y-4">
+                        <div>
+                            <label for="username-otp" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Verification Code</label>
+                            <input type="text" id="username-otp" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter 6-digit code">
+                        </div>
+                        <div>
+                            <label for="new-username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Username</label>
+                            <input type="text" id="new-username" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter new username">
+                        </div>
+                        <div class="flex space-x-3">
+                            <button @click="changeUsername" 
+                                    :disabled="loading"
+                                    class="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white py-2 px-4 rounded-md transition">
+                                <span x-show="!loading">Update Username</span>
+                                <span x-show="loading">Processing...</span>
+                            </button>
+                            <button @click="resetUsernameForm" 
+                                    class="bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 py-2 px-4 rounded-md transition">
+                                Cancel
+                            </button>
+                        </div>
+                        <div x-show="cooldown === 0 && usernameOtpSent" class="text-center mt-2">
+                            <button @click="requestUsernameOtp" class="text-blue-500 dark:text-blue-400 text-sm hover:underline">
+                                Resend verification code
+                            </button>
+                        </div>
+                        <div x-show="cooldown > 0" class="text-center mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            Resend available in <span x-text="cooldown"></span> seconds
+                        </div>
+                    </div>
+                    
+                    <!-- Step 3: Success -->
+                    <div x-show="usernameStep === 3" class="space-y-4">
+                        <div class="bg-green-100 dark:bg-green-900/50 border-l-4 border-green-500 text-green-700 dark:text-green-200 p-4">
+                            <p>Username updated successfully! The page will refresh shortly.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Change Password Section -->
+                <div class="bg-purple-50 dark:bg-purple-900/30 p-6 rounded-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Reset Password</h2>
+                    
+                    <!-- Step 1: Request OTP -->
+                    <div x-show="passwordStep === 1" class="space-y-4">
+                        <p class="text-sm text-gray-600 dark:text-gray-300">To reset your password, we'll send a verification code to your email.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Password must have at least 8 characters, include uppercase and lowercase letters, a number, and a special character.</p>
+                        <button @click="requestPasswordOtp" 
+                                :disabled="loading || cooldown > 0"
+                                class="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-purple-300 dark:disabled:bg-purple-800 text-white py-2 px-4 rounded-md transition">
+                            <span x-show="!loading && cooldown === 0">Send Verification Code</span>
+                            <span x-show="loading">Processing...</span>
+                            <span x-show="!loading && cooldown > 0">Resend in <span x-text="cooldown"></span>s</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Step 2: Enter OTP & New Password -->
+                    <div x-show="passwordStep === 2" class="space-y-4">
+                        <div>
+                            <label for="password-otp" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Verification Code</label>
+                            <input type="text" id="password-otp" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter 6-digit code">
+                        </div>
+                        <div>
+                            <label for="new-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
+                            <input type="password" id="new-password" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter new password">
+                        </div>
+                        <div>
+                            <label for="confirm-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm New Password</label>
+                            <input type="password" id="confirm-password" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Confirm new password">
+                        </div>
+                        <div class="flex space-x-3">
+                            <button @click="resetPassword" 
+                                    :disabled="loading"
+                                    class="flex-1 bg-purple-500 hover:bg-purple-600 disabled:bg-purple-300 dark:disabled:bg-purple-800 text-white py-2 px-4 rounded-md transition">
+                                <span x-show="!loading">Reset Password</span>
+                                <span x-show="loading">Processing...</span>
+                            </button>
+                            <button @click="resetPasswordForm" 
+                                    class="bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 py-2 px-4 rounded-md transition">
+                                Cancel
+                            </button>
+                        </div>
+                        <div x-show="cooldown === 0 && passwordOtpSent" class="text-center mt-2">
+                            <button @click="requestPasswordOtp" class="text-purple-500 dark:text-purple-400 text-sm hover:underline">
+                                Resend verification code
+                            </button>
+                        </div>
+                        <div x-show="cooldown > 0" class="text-center mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            Resend available in <span x-text="cooldown"></span> seconds
+                        </div>
+                    </div>
+                    
+                    <!-- Step 3: Success -->
+                    <div x-show="passwordStep === 3" class="space-y-4">
+                        <div class="bg-green-100 dark:bg-green-900/50 border-l-4 border-green-500 text-green-700 dark:text-green-200 p-4">
+                            <p>Password reset successfully!</p>
+                        </div>
+                        <button @click="resetPasswordForm" 
+                                class="w-full bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 py-2 px-4 rounded-md transition">
+                            Back to Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Back to Dashboard Button -->
+        <div class="text-center">
+            <a href="{{ url_for('main.dashboard') }}" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back to Dashboard
+            </a>
+        </div>
+    </main>
+    
+    {% include 'partials/Footer.html' %}
+
+    <!-- Dark Mode Script -->
+    <script>
+    const toggle = document.getElementById("darkToggle");
+    const icon = document.getElementById("darkIcon");
+    const htmlElement = document.documentElement;
+    // Set theme on page load
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+        htmlElement.classList.add("dark");
+        icon.textContent = "🔆";
+        toggle.setAttribute("data-theme", "dark");
+    } else {
+        htmlElement.classList.remove("dark");
+        icon.textContent = "🌙";
+        toggle.setAttribute("data-theme", "light");
+    }
+    // Toggle theme on click
+    toggle.addEventListener("click", () => {
+        const isDark = htmlElement.classList.toggle("dark");
+        const newTheme = isDark ? "dark" : "light";
+        // Animate icon flip
+        icon.classList.add("scale-0");
+        setTimeout(() => {
+            icon.textContent = isDark ? "🔆" : "🌙";
+            icon.classList.remove("scale-0");
+            icon.classList.add("scale-100");
+        }, 150);
+        // Save preference
+        localStorage.setItem("theme", newTheme);
+        toggle.setAttribute("data-theme", newTheme);
+    });
+    </script>
+</body>
+</html>

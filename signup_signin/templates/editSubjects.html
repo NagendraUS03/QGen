@@ -1,0 +1,94 @@
+<!-- templates/editSubject.html -->
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Subject | QGen</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
+
+{% include 'partials/HeaderNavBar.html' %}
+
+<main class="max-w-3xl mx-auto p-6 mt-8 bg-white dark:bg-gray-800 shadow-lg rounded-lg">
+  <div class="mb-4">
+    <a href="{{ url_for('main.subjects') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back to Subjects
+    </a>
+  </div>
+
+  <h1 class="text-2xl font-bold mb-6 text-yellow-600 dark:text-yellow-400">✏️ Edit Subject</h1>
+
+  <form method="POST" action="{{ url_for('main.edit_subject', subject_id=subject.Subject_ID) }}" class="grid gap-4">
+    <div>
+      <label class="block mb-1 text-sm font-medium">Subject Name</label>
+      <input name="subject_name" required type="text" value="{{ subject.Subject_Name }}"
+             class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+    </div>
+
+    <div>
+      <label class="block mb-1 text-sm font-medium">Subject Code</label>
+      <input name="subject_code" required type="text" value="{{ subject.Subject_Code }}"
+             class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+    </div>
+
+    <div>
+      <label class="block mb-1 text-sm font-medium">Semester</label>
+      <input name="semester" required type="number" min="1" max="10" value="{{ subject.Semester }}"
+             class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+    </div>
+
+    <div>
+      <label class="block mb-1 text-sm font-medium">Credits</label>
+      <input name="credits" required type="number" min="1" value="{{ subject.Credits }}"
+             class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+    </div>
+
+    <div>
+      <label class="block mb-1 text-sm font-medium">Total Marks</label>
+      <input name="total_marks" required type="number" min="1" value="{{ subject.Total_Marks }}"
+             class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+    </div>
+
+    <div>
+      <label class="block mb-1 text-sm font-medium">Scheme</label>
+      <select name="scheme" id="schemeDropdown" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <option value="">-- Select Scheme --</option>
+        {% for scheme in schemes %}
+          <option value="{{ scheme }}" {% if scheme == subject.Scheme_Year %}selected{% endif %}>{{ scheme }}</option>
+        {% endfor %}
+        <option value="new">➕ Add New Scheme</option>
+      </select>
+    </div>
+
+    <div id="newSchemeField" class="hidden">
+      <label class="block mb-1 text-sm font-medium">New Scheme Year</label>
+      <input type="text" name="new_scheme" placeholder="e.g. 2025"
+             class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+    </div>
+
+    <div class="flex justify-end mt-4">
+      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md">Save Changes</button>
+    </div>
+  </form>
+</main>
+
+{% include 'partials/footer.html' %}
+
+<script>
+  const dropdown = document.getElementById('schemeDropdown');
+  const newField = document.getElementById('newSchemeField');
+  dropdown.addEventListener('change', function () {
+    newField.classList.toggle('hidden', dropdown.value !== 'new');
+  });
+</script>
+
+</body>
+</html>

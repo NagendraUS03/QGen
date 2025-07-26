@@ -1,0 +1,103 @@
+<!-- templates/modules.html -->
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <title>Modules | QGen</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
+
+<!-- Header -->
+{% include 'partials/HeaderNavBar.html' %}
+
+<!-- Main Container -->
+<main class="max-w-5xl mx-auto px-4 py-8">
+  <div class="mb-6">
+    <a href="{{ url_for('main.subjects') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back to Subjects
+    </a>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+    <h1 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">{{ subject.Subject_Name }}</h1>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-gray-600 dark:text-gray-400">
+      <p><span class="font-medium">Code:</span> {{ subject.Subject_Code }}</p>
+      <p><span class="font-medium">Scheme:</span> {{ subject.Scheme }}</p>
+      <p><span class="font-medium">Semester:</span> {{ subject.Semester }}</p>
+      <p><span class="font-medium">Credits:</span> {{ subject.Credits }}</p>
+      <p><span class="font-medium">Learning Hours:</span> {{ subject.Learning_Hours }}</p>
+      <p><span class="font-medium">Total Marks:</span> {{ subject.Total_Marks }}</p>
+    </div>
+  </div>
+
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-xl font-bold text-indigo-600 dark:text-indigo-400">Modules</h2>
+    <a href="{{ url_for('main.add_module', subject_id=subject.Subject_ID) }}" 
+       class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow">
+      ➕ Add Module
+    </a>
+  </div>
+
+  <!-- Module Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {% if modules %}
+      {% for module in modules %}
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5 border-l-4 border-green-400 hover:shadow-md">
+        <h3 class="text-lg font-bold mb-1 text-indigo-700 dark:text-indigo-300">{{ module.Module_Name }}</h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Number: {{ module.Module_Number }}</p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Marks: {{ module.Module_Marks }} </p>
+        <div class="flex justify-end mt-4 gap-2">
+          <a href="{{ url_for('main.add_module', subject_id=subject.Subject_ID, module_id=module.Module_ID) }}"
+            class="text-yellow-500 hover:underline text-sm">Edit</a>
+
+          <button onclick="confirmDeleteModule({{ module.Module_ID }}, '{{ module.Module_Name }}')"
+                  class="text-red-500 hover:underline text-sm">Delete</button>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow p-5 text-center">
+        <p class="text-gray-600 dark:text-gray-400">No modules found for this subject. Add your first module!</p>
+      </div>
+    {% endif %}
+  </div>
+</main>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModuleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+    <h3 class="text-lg font-bold mb-4 text-red-600">⚠️ Confirm Deletion</h3>
+    <p class="mb-6 text-gray-700 dark:text-gray-300">Are you sure you want to delete <span id="moduleNameToDelete" class="font-semibold"></span>? This will delete all data associated with this module.</p>
+    <div class="flex justify-end gap-4">
+      <button onclick="hideDeleteModal()" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-md text-gray-800">Cancel</button>
+      <form id="deleteModuleForm" method="POST" action="">
+        <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white">Delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% include 'partials/Footer.html' %}
+
+<script>
+function confirmDeleteModule(moduleId, moduleName) {
+  document.getElementById('moduleNameToDelete').textContent = moduleName;
+  document.getElementById('deleteModuleForm').action = "{{ url_for('main.delete_module', module_id=0) }}".replace('0', moduleId);
+  document.getElementById('deleteModuleModal').classList.remove('hidden');
+}
+
+function hideDeleteModal() {
+  document.getElementById('deleteModuleModal').classList.add('hidden');
+}
+</script>
+
+</body>
+</html>

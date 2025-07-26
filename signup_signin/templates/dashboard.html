@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard | QGen</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Tailwind CDN + config properly embedded -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {},
+            }
+        }
+    </script>
+
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    
+    <style>
+        /* Logo animation styles */
+        .logo-container:hover .logo-q {
+            transform: translateY(-2px);
+        }
+        .logo-container:hover .logo-gen {
+            transform: translateY(2px);
+        }
+        .logo-container:hover .paper-icon {
+            transform: rotate(15deg);
+        }
+        
+        /* Icon flip animation */
+        .scale-0 {
+            transform: scale(0);
+        }
+        .scale-100 {
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
+
+    <!-- Navbar -->
+    <nav class="bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center">
+        <!-- Animated Educational Logo -->
+        <div class="logo-container flex items-center gap-2 cursor-pointer">
+            <!-- Paper icon -->
+            <div class="paper-icon transition-transform duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </div>
+            
+            <!-- Logo text -->
+            <div class="flex items-end">
+                <span class="logo-q text-3xl font-bold text-indigo-600 dark:text-indigo-400 transition-transform duration-300">Q</span>
+                <span class="logo-gen text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-400 dark:to-purple-400 transition-transform duration-300">Gen</span>
+            </div>
+            
+            <!-- Tagline - only show on larger screens -->
+            <span class="hidden md:inline-block text-xs text-gray-500 dark:text-gray-400 italic">Question Paper Generator</span>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <span class="font-medium text-blue-600 dark:text-blue-400">Hello, Welcome {{ username }}</span>
+
+            <!-- 🌙 Dark Mode Toggle -->
+            <button id="darkToggle" data-theme="light" class="transition-transform duration-300 text-gray-600 dark:text-yellow-300 text-xl focus:outline-none" title="Toggle Dark Mode">
+                <span id="darkIcon" class="transition-transform duration-150">🌙</span>
+            </button>
+            
+            <a href="{{ url_for('main.logout') }}" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-8">
+        <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6">
+            <h2 class="text-2xl font-bold mb-4">Welcome to QGen!</h2>
+
+            <p class="mb-6 text-gray-600 dark:text-gray-300">This is where you'll generate question papers, track activity, and explore analytics.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a href="{{ url_for('main.generate_page') }}" class="block bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 p-4 rounded-md transition">
+                    <h3 class="text-lg font-semibold">➕ Generate Paper</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">Start a new question paper with constraints and syllabus data.</p>
+                </a>
+                <a href="#" class="block bg-green-100 dark:bg-green-900 hover:bg-green-200 dark:hover:bg-green-800 p-4 rounded-md transition">
+                    <h3 class="text-lg font-semibold">📊 View Analytics</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">Analyze paper difficulty, usage, and past trends.</p>
+                </a>
+                <a href="{{ url_for('main.subjects') }}"class="block bg-yellow-100 dark:bg-yellow-900 hover:bg-yellow-200 dark:hover:bg-yellow-800 p-4 rounded-md transition">
+                    <h3 class="text-lg font-semibold">📚 View Subjects</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">Manage syllabus modules, question banks, and topics.</p>
+                </a>
+                <a href="{{ url_for('main.account_settings') }}" class="block bg-purple-100 dark:bg-purple-900 hover:bg-purple-200 dark:hover:bg-purple-800 p-4 rounded-md transition">
+                    <h3 class="text-lg font-semibold">⚙️ Account Settings</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">Edit your profile and change password.</p>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    {% include 'partials/footer.html' %}
+
+    <!-- Dark Mode Script -->
+    <script>
+    const toggle = document.getElementById("darkToggle");
+    const icon = document.getElementById("darkIcon");
+    const htmlElement = document.documentElement;
+
+    // Set theme on page load
+    const savedTheme = localStorage.getItem("theme");
+
+    if (savedTheme === "dark") {
+        htmlElement.classList.add("dark");
+        icon.textContent = "🔆";
+        toggle.setAttribute("data-theme", "dark");
+    } else {
+        htmlElement.classList.remove("dark");
+        icon.textContent = "🌙";
+        toggle.setAttribute("data-theme", "light");
+    }
+
+    // Toggle theme on click
+    toggle.addEventListener("click", () => {
+        const isDark = htmlElement.classList.toggle("dark");
+        const newTheme = isDark ? "dark" : "light";
+
+        // Animate icon flip
+        icon.classList.add("scale-0");
+        setTimeout(() => {
+            icon.textContent = isDark ? "🔆" : "🌙";
+            icon.classList.remove("scale-0");
+            icon.classList.add("scale-100");
+        }, 150);
+
+        // Save preference
+        localStorage.setItem("theme", newTheme);
+        toggle.setAttribute("data-theme", newTheme);
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <title>Generated Paper | QGen</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {} }
+    };
+  </script>
+  <style>
+    @media print {
+      button, nav, footer { display: none !important; }
+      body { background: white !important; color: black !important; }
+    }
+    
+    /* Custom scrollbar for better UX */
+    #paperPreview::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    #paperPreview::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    
+    #paperPreview::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+    
+    #paperPreview::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen">
+
+  <!-- ✅ Navbar -->
+  {% include 'partials/HeaderNavBar.html' %}
+
+  <div class="container mx-auto px-4 py-8 mb-20">
+    <div class="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-visible">
+      <div class="p-6 md:p-8">
+        <h1 class="text-2xl md:text-3xl font-bold text-center text-indigo-600 dark:text-indigo-400 mb-6">
+          Generated Question Paper
+        </h1>
+        <a href="/generate" class="text-indigo-500 hover:text-indigo-700 flex items-center mb-6">
+          ← <span class="ml-2">Back to Generate</span>
+        </a>
+        
+
+        <!-- ✅ Question Preview -->
+        <div id="paperPreview" class="max-h-[60vh] overflow-y-auto space-y-6 pr-2">
+          <!-- Questions will be injected here by JS -->
+        </div>
+
+        <!-- ✅ Buttons - Improved Layout -->
+        <div class="mt-8 flex flex-col sm:flex-row justify-between gap-4 pb-4">
+          <!-- <button onclick="regeneratePaper()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-md w-full sm:w-auto font-medium flex items-center justify-center gap-2">
+            <span>🔁</span> Regenerate
+          </button> -->
+          <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md w-full sm:w-auto font-medium flex items-center justify-center gap-2">
+            <span>🖨️</span> Print
+          </button>
+          <div class="relative inline-block">
+            <button onclick="toggleExportDropdown()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md w-full sm:w-auto font-medium flex items-center justify-center gap-2">
+              ⬇️ Export
+            </button>
+            <div id="exportDropdown" class="absolute mt-2 right-0 bg-white dark:bg-gray-700 rounded-md shadow-lg z-50 hidden" style="min-width: 150px; bottom: auto; top: 100%;">
+              <button onclick="exportAs('pdf')" class="block w-full px-4 py-2 text-sm text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600">Export as PDF</button>
+              <button onclick="exportAs('word')" class="block w-full px-4 py-2 text-sm text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600">Export as Word</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include 'partials/Footer.html' %}
+
+  <!-- ✅ JavaScript -->
+  <script>
+    const result = JSON.parse(sessionStorage.getItem("generatedPaper"));
+
+    if (!result || !result.questions) {
+      document.getElementById("paperPreview").innerHTML =
+        "<p class='text-red-500 text-center py-8'>No paper data found. Please generate again.</p>";
+    } else {
+      const container = document.getElementById("paperPreview");
+      result.questions.forEach((q, i) => {
+        const div = document.createElement("div");
+        div.className = "p-5 bg-gray-50 dark:bg-gray-700 rounded-lg shadow border-l-4 border-indigo-500 hover:shadow-lg transition-all";
+        div.innerHTML = `
+          <p class="font-semibold text-lg mb-2">Q${i + 1}. (${q.Marks} Marks)</p>
+          <p class="mb-3">${q.text}</p>
+          <p class="text-xs text-gray-600 dark:text-gray-300">Difficulty: ${q.Difficulty}, Bloom: ${q.Bloom}</p>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+  function regeneratePaper() {
+    const original = JSON.parse(sessionStorage.getItem("generatedPaper"));
+    if (!original) return alert("Missing data");
+
+    const requestData = {
+      subject_id: original.subject_id,
+      modules: original.modules,
+      marks: original.marks,
+      difficulty: original.difficulty,
+      taxonomy: original.taxonomy,
+    };
+
+    fetch("/generate_paper", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestData)
+    })
+    .then(res => res.json())
+    .then(newResult => {
+      if (newResult.success) {
+        sessionStorage.setItem("generatedPaper", JSON.stringify({ ...newResult, ...requestData }));
+        window.location.reload();
+      } else {
+        alert(newResult.message || "Failed to regenerate");
+      }
+    })
+    .catch(() => alert("Error during regeneration"));
+  }
+
+  function toggleExportDropdown() {
+    const dropdown = document.getElementById("exportDropdown");
+    dropdown.classList.toggle("hidden");
+    
+    // Position the dropdown to ensure it's fully visible
+    const button = dropdown.previousElementSibling;
+    const buttonRect = button.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    
+    // Calculate if there's enough space below
+    const spaceBelow = viewportHeight - buttonRect.bottom;
+    const dropdownHeight = dropdown.offsetHeight;
+    
+    // If not enough space below, position above the button
+    if (spaceBelow < dropdownHeight && buttonRect.top > dropdownHeight) {
+      dropdown.style.bottom = "100%";
+      dropdown.style.top = "auto";
+      dropdown.style.marginBottom = "8px";
+      dropdown.style.marginTop = "0";
+    } else {
+      dropdown.style.top = "100%";
+      dropdown.style.bottom = "auto";
+      dropdown.style.marginTop = "8px";
+      dropdown.style.marginBottom = "0";
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function closeDropdown(e) {
+      if (!e.target.closest('.relative')) {
+        document.getElementById("exportDropdown").classList.add("hidden");
+        document.removeEventListener('click', closeDropdown);
+      }
+    }, { once: true });
+  }
+
+  function exportAs(type) {
+    const result = JSON.parse(sessionStorage.getItem("generatedPaper"));
+    if (!result || !result.questions) {
+      alert("No paper data found. Please generate again.");
+      return;
+    }
+
+    if (type === 'pdf') {
+      // Create a clean document for PDF export
+      const win = window.open('', '_blank');
+      win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Generated Question Paper</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+            h1 { text-align: center; color: #4338ca; margin-bottom: 30px; }
+            .question { margin-bottom: 20px; padding: 15px; border-left: 4px solid #4338ca; background-color: #f9fafb; }
+            .question-header { font-weight: bold; font-size: 18px; margin-bottom: 10px; }
+            .question-text { margin-bottom: 10px; }
+            .question-meta { font-size: 12px; color: #6b7280; }
+            @media print {
+              body { font-size: 12pt; }
+              .question { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Generated Question Paper</h1>
+          ${result.questions.map((q, i) => `
+            <div class="question">
+              <div class="question-header">Q${i + 1}. (${q.Marks} Marks)</div>
+              <div class="question-text">${q.text}</div>
+              <div class="question-meta">Difficulty: ${q.Difficulty}, Bloom: ${q.Bloom}</div>
+            </div>
+          `).join('')}
+        </body>
+        </html>
+      `);
+      win.document.close();
+      setTimeout(() => {
+        win.print();
+      }, 500);
+    } else if (type === 'word') {
+      // Create a proper Word document format with XML
+      const header = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+              xmlns:w='urn:schemas-microsoft-com:office:word'
+              xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <meta charset="utf-8">
+          <title>Generated Question Paper</title>
+          <style>
+            body { font-family: 'Calibri', sans-serif; }
+            h1 { text-align: center; color: #4338ca; margin-bottom: 20pt; }
+            .question { margin-bottom: 20pt; padding: 10pt; border-left: 4pt solid #4338ca; background-color: #f9fafb; }
+            .question-header { font-weight: bold; font-size: 12pt; margin-bottom: 8pt; }
+            .question-text { margin-bottom: 8pt; }
+            .question-meta { font-size: 9pt; color: #6b7280; }
+            /* Word-specific CSS */
+            @page { size: 21cm 29.7cm; margin: 2cm; mso-header-margin: 1cm; mso-footer-margin: 1cm; }
+            p { mso-margin-top-alt: 0pt; mso-margin-bottom-alt: 0pt; }
+          </style>
+        </head>
+        <body>
+          <h1>Generated Question Paper</h1>
+      `;
+
+      const content = result.questions.map((q, i) => `
+        <div class="question">
+          <div class="question-header">Q${i + 1}. (${q.Marks} Marks)</div>
+          <div class="question-text">${q.text}</div>
+          <div class="question-meta">Difficulty: ${q.Difficulty}, Bloom: ${q.Bloom}</div>
+        </div>
+      `).join('');
+
+      const footer = `</body></html>`;
+      const htmlContent = header + content + footer;
+
+      // Create a blob with the Word content
+      const blob = new Blob(['\ufeff', htmlContent], {
+        type: 'application/msword'
+      });
+      
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Generated_Question_Paper.doc`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("exportDropdown").classList.add("hidden");
+  }
+
+  // Add event listener to close dropdown when page is scrolled
+  window.addEventListener('scroll', function() {
+    document.getElementById("exportDropdown").classList.add("hidden");
+  });
+  </script>
+
+</body>
+</html>

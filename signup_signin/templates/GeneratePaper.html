@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <title>QGen</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {} }
+    }
+  </script>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+  <style>
+    .logo-container:hover .logo-q { transform: translateY(-2px); }
+    .logo-container:hover .logo-gen { transform: translateY(2px); }
+    .logo-container:hover .paper-icon { transform: rotate(15deg); }
+    .scale-0 { transform: scale(0); }
+    .scale-100 { transform: scale(1); }
+  </style>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
+
+  <!-- ✅ Navbar -->
+  {% include 'partials/HeaderNavBar.html' %}
+
+  <!-- ✅ Main Form -->
+  <div class="max-w-4xl mx-auto p-6 my-8 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-lg rounded-lg">
+    <h2 class="text-3xl font-bold mb-6 text-center text-indigo-600 dark:text-indigo-400">
+      Generate Question Paper
+    </h2>
+
+    <form id="generateForm" class="space-y-6">
+
+      <!-- Subject Dropdown -->
+      <div>
+        <label class="block text-sm font-medium mb-2">Subject</label>
+        <select id="subjectSelect" name="subject_id" onchange="filterModules()" class="w-full p-3 border rounded-md bg-gray-50 dark:bg-gray-700">
+          <option value="" selected disabled>Select Subject</option>
+          {% for s in subjects %}
+            <option value="{{ s[0] }}" data-code="{{ s[2] }}">{{ s[1] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Subject Code Auto Fill -->
+      <div>
+        <label class="block text-sm font-medium mb-2">Subject Code</label>
+        <input type="text" id="subjectCode" readonly placeholder="Select a subject first" class="w-full p-3 border rounded-md bg-gray-50 dark:bg-gray-700">
+      </div>
+
+      <!-- Modules Filter -->
+      <div>
+        <label class="block text-sm font-medium mb-2">Modules</label>
+        <div id="moduleContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-gray-50 dark:bg-gray-700 p-4 rounded-md max-h-60 overflow-y-auto">
+          {% for m in modules %}
+            <div class="flex items-center module-option" data-subject="{{ m[2] }}">
+              <input type="checkbox" id="module-{{ m[0] }}" name="modules" value="{{ m[0] }}" class="w-4 h-4 text-indigo-600">
+              <label for="module-{{ m[0] }}" class="ml-2 text-sm">{{ m[1] }}</label>
+            </div>
+          {% endfor %}
+        </div>
+        <div id="module-error" class="mt-1 text-red-500 text-xs hidden">Please select at least one module</div>
+      </div>
+
+      <!-- Total Marks -->
+      <div>
+        <label class="block text-sm font-medium mb-2">Total Marks</label>
+        <input type="number" name="marks" min="10" max="200" required class="w-full p-3 border rounded-md bg-gray-50 dark:bg-gray-700 focus:ring-indigo-200">
+        <div class="mt-1 text-xs text-gray-500">Enter a value between 10 and 200</div>
+      </div>
+
+      <!-- Difficulty Distribution -->
+      <div>
+        <label class="block text-sm font-medium mb-2">Difficulty Level Distribution</label>
+        <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-md">
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs mb-1 text-center">Easy (%)</label>
+              <input type="number" name="easy" id="easy" min="0" max="100" value="30" class="w-full p-2 text-center border rounded-md bg-white dark:bg-gray-600">
+            </div>
+            <div>
+              <label class="block text-xs mb-1 text-center">Medium (%)</label>
+              <input type="number" name="medium" id="medium" min="0" max="100" value="50" class="w-full p-2 text-center border rounded-md bg-white dark:bg-gray-600">
+            </div>
+            <div>
+              <label class="block text-xs mb-1 text-center">Hard (%)</label>
+              <input type="number" name="hard" id="hard" min="0" max="100" value="20" class="w-full p-2 text-center border rounded-md bg-white dark:bg-gray-600">
+            </div>
+          </div>
+          <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 mt-4">
+            <div id="difficulty-bar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 100%"></div>
+          </div>
+          <div id="difficulty-total" class="text-xs text-center mt-1">Total: 100%</div>
+          <div id="difficulty-error" class="mt-1 text-red-500 text-xs text-center hidden">Percentages must sum to 100%</div>
+        </div>
+      </div>
+
+      <!-- Bloom's Taxonomy -->
+      <div>
+        <label class="block text-sm font-medium mb-2">Bloom's Taxonomy</label>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 bg-gray-50 dark:bg-gray-700 p-4 rounded-md">
+          {% for b in ['Remember', 'Understand', 'Apply'] %}
+            <div class="flex items-center">
+              <input type="checkbox" id="bloom-{{ b|lower }}" name="taxonomy" value="{{ b|lower }}" class="w-4 h-4 text-indigo-600" {% if loop.index <= 3 %}checked{% endif %}>
+              <label for="bloom-{{ b|lower }}" class="ml-2 text-sm">{{ b }}</label>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="mt-1 text-xs text-gray-500">Please select at least one taxonomy level</div>
+      </div>
+
+      <!-- Submit -->
+      <div class="flex justify-between items-center pt-4">
+        <button type="submit" id="generateBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-md flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          Generate Paper
+        </button>
+        <div id="loading" class="hidden">
+          <div class="sk-chase">
+            <div class="sk-chase-dot"></div><div class="sk-chase-dot"></div><div class="sk-chase-dot"></div>
+            <div class="sk-chase-dot"></div><div class="sk-chase-dot"></div><div class="sk-chase-dot"></div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  {% include 'partials/Footer.html' %}
+
+  <!-- ✅ Scripts -->
+  <script>
+    function filterModules() {
+      const subjectSelect = document.getElementById("subjectSelect");
+      const selectedOption = subjectSelect.options[subjectSelect.selectedIndex];
+      const selectedId = selectedOption.value;
+      const subjectCode = selectedOption.dataset.code || "";
+      const codeInput = document.getElementById("subjectCode");
+      codeInput.value = subjectCode;
+      if (!subjectCode) codeInput.placeholder = "Select a subject first";
+
+      const moduleOptions = document.querySelectorAll(".module-option");
+      let count = 0;
+      moduleOptions.forEach(option => {
+        const subjectId = option.dataset.subject;
+        if (subjectId === selectedId && count < 5) {
+          option.style.display = "flex";
+          count++;
+        } else {
+          option.style.display = "none";
+        }
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      filterModules();
+
+      const easy = document.getElementById("easy");
+      const medium = document.getElementById("medium");
+      const hard = document.getElementById("hard");
+      const bar = document.getElementById("difficulty-bar");
+      const totalText = document.getElementById("difficulty-total");
+      const errorText = document.getElementById("difficulty-error");
+
+      function updateBar() {
+        const e = parseInt(easy.value) || 0;
+        const m = parseInt(medium.value) || 0;
+        const h = parseInt(hard.value) || 0;
+        const total = e + m + h;
+        totalText.textContent = `Total: ${total}%`;
+
+        if (total === 100) {
+          bar.classList.remove("bg-red-500");
+          bar.classList.add("bg-indigo-600");
+          errorText.classList.add("hidden");
+        } else {
+          bar.classList.remove("bg-indigo-600");
+          bar.classList.add("bg-red-500");
+          errorText.classList.remove("hidden");
+        }
+        bar.style.width = `${Math.min(total, 100)}%`;
+      }
+
+      easy.addEventListener("input", updateBar);
+      medium.addEventListener("input", updateBar);
+      hard.addEventListener("input", updateBar);
+      updateBar();
+    });
+
+    // Question Paper Generator - Frontend JS
+    document.addEventListener("DOMContentLoaded", () => {
+      const generateForm = document.getElementById("generateForm");
+      const generateBtn = document.getElementById("generateBtn");
+      const loading = document.getElementById("loading");
+      const difficultyFields = ["easy", "medium", "hard"];
+      const moduleContainer = document.getElementById("moduleContainer");
+      const moduleError = document.getElementById("module-error");
+      const difficultyError = document.getElementById("difficulty-error");
+
+    // Form submission handler
+    generateForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+    
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+    
+    // Show loading state
+    setLoading(true);
+    
+    try {
+      // Collect form data
+      const formData = collectFormData();
+      
+      // Send API request
+      const response = await fetch("/generate_paper", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to generate paper");
+      }
+      
+      if (!result.success) {
+        throw new Error(result.message || "Failed to generate paper");
+      }
+      
+      // Store the result in session storage for the results page
+      sessionStorage.setItem("generatedPaper", JSON.stringify(result));
+      
+      // Redirect to results page
+      window.location.href = "/paper_result";
+      
+    } catch (error) {
+      showToast(error.message || "An error occurred while generating the paper", "error");
+    } finally {
+      setLoading(false);
+    }
+    });
+  
+    /**
+    * Validate the form before submission
+    * @returns {boolean} is valid
+    */
+    function validateForm() {
+      let isValid = true;
+    
+    // Check if subject is selected
+    const subjectSelect = document.getElementById("subjectSelect");
+    if (!subjectSelect.value) {
+      showToast("Please select a subject", "warning");
+      isValid = false;
+    }
+    
+    // Check if modules are selected
+    const selectedModules = Array.from(
+      document.querySelectorAll('input[name="modules"]:checked')
+    );
+    
+    if (selectedModules.length === 0) {
+      moduleError.classList.remove("hidden");
+      showToast("Please select at least one module", "warning");
+      isValid = false;
+    } else {
+      moduleError.classList.add("hidden");
+    }
+    
+    // Validate difficulty percentages sum to 100%
+    const difficulties = difficultyFields.map(field => {
+      return parseInt(document.getElementById(field).value) || 0;
+    });
+    
+    const totalDifficulty = difficulties.reduce((sum, value) => sum + value, 0);
+    
+    if (totalDifficulty !== 100) {
+      difficultyError.classList.remove("hidden");
+      showToast("Difficulty percentages must sum to 100%", "warning");
+      isValid = false;
+    } else {
+      difficultyError.classList.add("hidden");
+    }
+    
+    // Validate taxonomy selections
+    const taxonomySelections = Array.from(
+      document.querySelectorAll('input[name="taxonomy"]:checked')
+    );
+    
+    if (taxonomySelections.length === 0) {
+      showToast("Please select at least one Bloom's taxonomy level", "warning");
+      isValid = false;
+    }
+    
+    return isValid;
+    }
+  
+    /**
+    * Collect form data for API request
+    * @returns {Object} form data
+    */
+    function collectFormData() {
+      // Get subject ID
+      const subjectId = document.getElementById("subjectSelect").value;
+    
+    // Get selected modules
+    const selectedModules = Array.from(
+      document.querySelectorAll('input[name="modules"]:checked')
+    ).map(el => el.value);
+    
+    // Get total marks
+    const marks = parseInt(document.querySelector('input[name="marks"]').value);
+    
+    // Get difficulty distribution
+    const difficulty = {};
+    difficultyFields.forEach(field => {
+      difficulty[field] = parseInt(document.getElementById(field).value) || 0;
+    });
+    
+    // Get selected taxonomy levels
+    const taxonomy = Array.from(
+      document.querySelectorAll('input[name="taxonomy"]:checked')
+    ).map(el => el.value);
+    
+    return {
+      subject_id: subjectId,
+      modules: selectedModules,
+      marks: marks,
+      difficulty: difficulty,
+      taxonomy: taxonomy
+    };
+    }
+  
+    /**
+      * Toggle loading state
+      * @param {boolean} isLoading 
+    */
+    function setLoading(isLoading) {
+      if (isLoading) {
+        generateBtn.disabled = true;
+        generateBtn.classList.add("opacity-70");
+        loading.classList.remove("hidden");
+      } else {
+        generateBtn.disabled = false;
+        generateBtn.classList.remove("opacity-70");
+        loading.classList.add("hidden");
+      }
+    }
+  
+    /**
+      * Show toast notification
+      * @param {string} message 
+      * @param {string} type success|error|warning|info
+    */
+    function showToast(message, type = "info") {
+      // Check if we have a toast container
+      let toastContainer = document.getElementById("toast-container");
+    
+    if (!toastContainer) {
+      toastContainer = document.createElement("div");
+      toastContainer.id = "toast-container";
+      toastContainer.className = "fixed top-4 right-4 z-50 flex flex-col gap-2";
+      document.body.appendChild(toastContainer);
+    }
+    
+    // Create toast element
+    const toast = document.createElement("div");
+    toast.className = `bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 mb-3 flex items-center transition-all duration-300 transform translate-x-full opacity-0 max-w-md`;
+    
+    // Add border and icon based on type
+    let iconSvg = "";
+    switch (type) {
+      case "success":
+        toast.classList.add("border-l-4", "border-green-500");
+        iconSvg = `<svg class="w-6 h-6 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>`;
+        break;
+      case "error":
+        toast.classList.add("border-l-4", "border-red-500");
+        iconSvg = `<svg class="w-6 h-6 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>`;
+        break;
+      case "warning":
+        toast.classList.add("border-l-4", "border-yellow-500");
+        iconSvg = `<svg class="w-6 h-6 text-yellow-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>`;
+        break;
+      default: // info
+        toast.classList.add("border-l-4", "border-blue-500");
+        iconSvg = `<svg class="w-6 h-6 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>`;
+    }
+    
+    // Set toast content
+    toast.innerHTML = `
+      <div class="flex items-center">
+        ${iconSvg}
+        <p class="text-sm text-gray-700 dark:text-gray-300">${message}</p>
+      </div>
+      <button class="ml-auto text-gray-500 hover:text-gray-700">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    `;
+    
+    // Add close button functionality
+    const closeBtn = toast.querySelector("button");
+    closeBtn.addEventListener("click", () => {
+      removeToast(toast);
+    });
+    
+    // Add to container
+    toastContainer.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+      toast.classList.remove("translate-x-full", "opacity-0");
+    }, 10);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      removeToast(toast);
+    }, 5000);
+  }
+  
+    /**
+    * Remove toast with animation
+    * @param {HTMLElement} toast 
+    */
+    function removeToast(toast) {
+      toast.classList.add("translate-x-full", "opacity-0");
+      setTimeout(() => {
+        toast.remove();
+      }, 300);
+    }
+  });
+  </script>
+
+</body>
+</html>
