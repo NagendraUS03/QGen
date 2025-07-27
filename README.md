@@ -1,6 +1,6 @@
 # QGen - A Customised Question Paper Generator
 
-**QGen** is a full-stack web application designed to automate the generation of academic question papers based on syllabus structure and cognitive levels (Bloom's Taxonomy). Built using Flask, MySQL, and Tailwind CSS,
+**QGen** is a full-stack website designed to automate the generation of academic question papers based on syllabus structure and cognitive levels (Bloom's Taxonomy). Built using Flask, MySQL, and Tailwind CSS,
   QGen eliminates manual workload, reduces human error, ensures syllabus alignment, and enables dynamic question paper generation using Genetic Algorithms.
 
 ---
